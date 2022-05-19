@@ -19,8 +19,12 @@ namespace InterpreterExam {
                     return Eval(expressionStatement.Expression, env);
                 case IntegerLiteral integerLiteral:
                     return new Integer {Value = integerLiteral.Value};
+                case CharacterLiteral characterLiteral:
+                    return new Character {Value = characterLiteral.Value};
                 case BooleanExpression booleanExpression:
                     return nativeBoolToBooleanObject(booleanExpression.Value);
+                case RealNumberLiteral realNumberLiteral:
+                    return new RealNumber {Value = realNumberLiteral.Value};
                 case PrefixExpression prefixExpression:
                     Object prefixRight = Eval(prefixExpression.Right, env);
 
@@ -47,21 +51,13 @@ namespace InterpreterExam {
                     return evalIfExpression(ifExpression, env);
                 case ReturnStatement returnStatement:
                     Object returnVal = Eval(returnStatement.ReturnValue, env);
-
                     if (isError(returnVal)) {
                         return returnVal;
                     }
 
                     return new ReturnValue {Value = returnVal};
-                case LetStatement letStatement:
-                    Object letVal = Eval(letStatement.Value, env);
-                    if (isError(letVal)) {
-                        return letVal;
-                    }
-
-                    env.Set(letStatement.Name.Value, letVal);
-
-                    return letVal;
+                case DataStatement dataStatement:
+                    return evalDataStatement(dataStatement, env);
                 case Identifier identifier:
                     return evalIdentifier(identifier, env);
                 case FunctionLiteralExpression functionLiteral:
@@ -147,6 +143,42 @@ namespace InterpreterExam {
             return result;
         }
 
+        private Object evalDataStatement(DataStatement dataStatement, Environment env) {
+            Object letVal = Eval(dataStatement.Value, env);
+            if (isError(letVal)) {
+                return letVal;
+            }
+
+            ObjectType dataType;
+
+            switch (dataStatement.Token.Type) {
+                case TokenType.INT:
+                    dataType = ObjectType.INTEGER_OBJ;
+                    break;
+                case TokenType.CHAR:
+                    dataType = ObjectType.CHARACTER_OBJ;
+                    break;
+                case TokenType.BOOL:
+                    dataType = ObjectType.BOOLEAN_OBJ;
+                    break;
+                case TokenType.FLOAT:
+                    dataType = ObjectType.REAL_NUMBER_OBJ;
+                    break;
+                case TokenType.IDENT:
+                    var getValueTuple = env.Get(dataStatement.Name.Value);
+                    if (!getValueTuple.Item2) {
+                        return newError($"'{dataStatement.Name.Value}' was not declared in this scope");
+                    }
+
+                    dataType = getValueTuple.Item1.Type();
+                    break;
+                default:
+                    return NULL;
+            }
+
+            return env.Set(dataStatement.Name.Value, letVal, dataType);
+        }
+
         private Boolean nativeBoolToBooleanObject(bool input) {
             return input ? TRUE : FALSE;
         }
@@ -188,8 +220,8 @@ namespace InterpreterExam {
         }
 
         private Object evalInfixExpression(string Operator, Object left, Object right) {
-            if (left.Type() == ObjectType.INTEGER_OBJ && right.Type() == ObjectType.INTEGER_OBJ) {
-                return evalIntegerInfixExpression(Operator, left, right);
+            if (IsNumber(left) && IsNumber(right)) {
+                return evalNumberInfixExpression(Operator, left, right);
             }
 
             if (left.Type() == ObjectType.STRING_OBJ && right.Type() == ObjectType.STRING_OBJ) {
@@ -211,19 +243,19 @@ namespace InterpreterExam {
             return newError($"unknown operator: {left.Type()} {Operator} {right.Type()}");
         }
 
-        private Object evalIntegerInfixExpression(string Operator, Object left, Object right) {
-            long leftVal = ((Integer)left).Value;
-            long rightVal = ((Integer)right).Value;
+        private Object evalNumberInfixExpression(string Operator, Object left, Object right) {
+            float leftVal = GetNumberObjectValue(left);
+            float rightVal = GetNumberObjectValue(right);
 
             switch (Operator) {
                 case "+":
-                    return new Integer {Value = leftVal + rightVal};
+                    return new RealNumber {Value = leftVal + rightVal};
                 case "-":
-                    return new Integer {Value = leftVal - rightVal};
+                    return new RealNumber {Value = leftVal - rightVal};
                 case "*":
-                    return new Integer {Value = leftVal * rightVal};
+                    return new RealNumber {Value = leftVal * rightVal};
                 case "/":
-                    return new Integer {Value = leftVal / rightVal};
+                    return new RealNumber {Value = leftVal / rightVal};
                 case "<":
                     return nativeBoolToBooleanObject(leftVal < rightVal);
                 case ">":
@@ -398,7 +430,7 @@ namespace InterpreterExam {
             var env = NewEnclosedEnvironment(fn.Env);
 
             for (int i = 0; i < fn.Parameters.Count; i++) {
-                env.Set(fn.Parameters[i].Value, args[i]);
+                env.Set(fn.Parameters[i].Value, args[i], ObjectType.FUNCTION_OBJ);
             }
 
             return env;
@@ -416,6 +448,33 @@ namespace InterpreterExam {
             }
 
             return obj;
+        }
+
+        private float GetNumberObjectValue(Object numberObject) {
+            switch (numberObject) {
+                case Integer integer:
+                    return integer.Value;
+                case RealNumber realNumber:
+                    return realNumber.Value;
+                case Boolean boolean:
+                    return boolean.Value ? 1f : 0f;
+                case Character character:
+                    return character.Value;
+                default:
+                    return 0;
+            }
+        }
+
+        private bool IsNumber(Object numberObject) {
+            switch (numberObject.Type()) {
+                case ObjectType.INTEGER_OBJ:
+                case ObjectType.REAL_NUMBER_OBJ:
+                case ObjectType.BOOLEAN_OBJ:
+                case ObjectType.CHARACTER_OBJ:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }

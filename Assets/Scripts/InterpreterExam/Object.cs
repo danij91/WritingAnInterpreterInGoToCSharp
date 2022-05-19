@@ -30,6 +30,38 @@ namespace InterpreterExam {
         }
     }
 
+    public struct RealNumber : Object, Hashable {
+        public float Value;
+
+        public ObjectType Type() {
+            return ObjectType.REAL_NUMBER_OBJ;
+        }
+
+        public string Inspect() {
+            return Value.ToString();
+        }
+
+        public HashKey HashKey() {
+            return new HashKey {Type = Type(), Value = Value.GetHashCode()};
+        }
+    }
+
+    public struct Character : Object, Hashable {
+        public char Value;
+
+        public ObjectType Type() {
+            return ObjectType.CHARACTER_OBJ;
+        }
+
+        public string Inspect() {
+            return Value.ToString();
+        }
+
+        public HashKey HashKey() {
+            return new HashKey {Type = Type(), Value = Value};
+        }
+    }
+
     public struct String : Object, Hashable {
         public string Value;
 
@@ -193,6 +225,8 @@ namespace InterpreterExam {
     public enum ObjectType {
         INTEGER_OBJ,
         BOOLEAN_OBJ,
+        CHARACTER_OBJ,
+        REAL_NUMBER_OBJ,
         NULL_OBJ,
         RETURN_VALUE_OBJ,
         ERROR_OBJ,

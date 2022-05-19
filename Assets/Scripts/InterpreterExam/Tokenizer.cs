@@ -7,7 +7,10 @@ namespace InterpreterExam {
     public static class Tokenizer {
         private static Dictionary<string, TokenType> kewords = new Dictionary<string, TokenType>() {
             {"fn", TokenType.FUNCTION},
-            {"let", TokenType.LET},
+            {"int", TokenType.INT},
+            {"float", TokenType.FLOAT},
+            {"char", TokenType.CHAR},
+            {"bool", TokenType.BOOL},
             {"true", TokenType.TRUE},
             {"false", TokenType.FALSE},
             {"if", TokenType.IF},
@@ -59,11 +62,12 @@ namespace InterpreterExam {
     public enum TokenType {
         ILLEGAL,
         EOF,
-
+        
         //식별자 + 리터럴
-        IDENT,
         INT,
-        STRING,
+        CHAR,
+        FLOAT,
+        BOOL,
 
         //연산자
         ASSIGN,
@@ -89,9 +93,15 @@ namespace InterpreterExam {
         LBRACKET,
         RBRACKET,
 
+        //자료형
+        IDENT,
+        INTEGER,
+        STRING,
+        CHARACTER,
+        REAL_NUMBER,
+
         //키워드
         FUNCTION,
-        LET,
         TRUE,
         FALSE,
         IF,

@@ -107,6 +107,9 @@ namespace InterpreterExam {
                 case (byte)'"':
                     tok = new Token(TokenType.STRING, readString());
                     break;
+                case (byte)'\'':
+                    tok = new Token(TokenType.CHARACTER, readCharacter());
+                    break;
                 case 0:
                     tok = new Token(TokenType.EOF, "");
                     break;
@@ -117,7 +120,8 @@ namespace InterpreterExam {
                         return new Token(type, literal);
                     }
                     else if (isDigit(ch)) {
-                        return new Token(TokenType.INT, readNumber());
+                        var tuple = readNumber();
+                        return new Token(tuple.Item1, tuple.Item2);
                     }
                     else {
                         tok = new Token(TokenType.ILLEGAL, (char)ch + "");
@@ -136,6 +140,18 @@ namespace InterpreterExam {
             while (true) {
                 readChar();
                 if (ch == '"' || ch == 0) {
+                    break;
+                }
+            }
+
+            return input.Substring(tempPosition, position - tempPosition);
+        }
+
+        private string readCharacter() {
+            var tempPosition = position + 1;
+            while (true) {
+                readChar();
+                if (ch == '\'' || ch == 0) {
                     break;
                 }
             }
@@ -162,13 +178,19 @@ namespace InterpreterExam {
             }
         }
 
-        private string readNumber() {
+        private Tuple<TokenType, string> readNumber() {
             var tempPosition = position;
-            while (isDigit(ch)) {
+            var type = TokenType.INTEGER;
+
+            while (isDigit(ch) || ch == '.') {
+                if (ch == '.') {
+                    type = TokenType.REAL_NUMBER;
+                }
+
                 readChar();
             }
 
-            return input.Substring(tempPosition, position - tempPosition);
+            return new Tuple<TokenType, string>(type, input.Substring(tempPosition, position - tempPosition));
         }
 
         private bool isDigit(byte ch) {

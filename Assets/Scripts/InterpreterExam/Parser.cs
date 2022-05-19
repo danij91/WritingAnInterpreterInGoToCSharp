@@ -19,8 +19,8 @@ namespace InterpreterExam {
         private Dictionary<TokenType, PRECEDENCES> precedences = new Dictionary<TokenType, PRECEDENCES>() {
             {TokenType.EQ, PRECEDENCES.EQUALS},
             {TokenType.NOT_EQ, PRECEDENCES.EQUALS},
-            {TokenType.LT, PRECEDENCES.LESSGREATER},
-            {TokenType.GT, PRECEDENCES.LESSGREATER},
+            {TokenType.LT, PRECEDENCES.LESS_GREATER},
+            {TokenType.GT, PRECEDENCES.LESS_GREATER},
             {TokenType.PLUS, PRECEDENCES.SUM},
             {TokenType.MINUS, PRECEDENCES.SUM},
             {TokenType.SLASH, PRECEDENCES.PRODUCT},
@@ -33,7 +33,9 @@ namespace InterpreterExam {
             this.l = l;
 
             registerPrefix(TokenType.IDENT, parseIdentifier);
-            registerPrefix(TokenType.INT, parseIntegerLiteral);
+            registerPrefix(TokenType.INTEGER, parseIntegerLiteral);
+            registerPrefix(TokenType.REAL_NUMBER, parseRealNumberLiteral);
+            registerPrefix(TokenType.CHARACTER, parseCharacterLiteral);
             registerPrefix(TokenType.BANG, parsePrefixExpression);
             registerPrefix(TokenType.MINUS, parsePrefixExpression);
             registerPrefix(TokenType.TRUE, parseBooleanExpression);
@@ -86,25 +88,39 @@ namespace InterpreterExam {
         [CanBeNull]
         private Statement parseStatement() {
             switch (curToken.Type) {
-                case TokenType.LET:
-                    return parseLetStateMent();
+                case TokenType.BOOL:
+                case TokenType.CHAR:
+                case TokenType.FLOAT:
+                case TokenType.INT:
+                    return parseDataStateMent();
                 case TokenType.RETURN:
                     return parseReturnStatement();
+                case TokenType.IDENT:
+                    if (peekTokenIs(TokenType.ASSIGN)) {
+                        return parseDataStateMent();
+                    }
+
+                    return parseExpressionStatement();
                 default:
                     return parseExpressionStatement();
             }
         }
 
-        private LetStatement? parseLetStateMent() {
-            var stmt = new LetStatement {
+        private DataStatement? parseDataStateMent() {
+            var stmt = new DataStatement {
                 Token = curToken
             };
 
-            if (!expectPeek(TokenType.IDENT)) {
+            if (peekTokenIs(TokenType.IDENT)) {
+                NextToken();
+            }
+            else if (!peekTokenIs(TokenType.ASSIGN)) {
+                NextToken();
                 return null;
             }
 
             stmt.Name = new Identifier(curToken, curToken.Literal);
+
 
             if (!expectPeek(TokenType.ASSIGN)) {
                 return null;
@@ -218,8 +234,40 @@ namespace InterpreterExam {
             return lit;
         }
 
+        private Expression parseRealNumberLiteral() {
+            var lit = new RealNumberLiteral() {
+                Token = curToken
+            };
+
+            float value;
+            try {
+                value = float.Parse(curToken.Literal);
+            }
+            catch (Exception e) {
+                errors.Add($"could not parse {curToken.Literal} as float");
+                return null;
+            }
+
+            lit.Value = value;
+
+            return lit;
+        }
+
         private Expression parseStringLiteral() {
             return new StringLiteral {Token = curToken, Value = curToken.Literal};
+        }
+
+        private Expression parseCharacterLiteral() {
+            char ch;
+            try {
+                ch = char.Parse(curToken.Literal);
+            }
+            catch {
+                errors.Add($"cannot parse {curToken.Literal} to char");
+                return null;
+            }
+
+            return new CharacterLiteral {Token = curToken, Value = ch};
         }
 
         private Expression parseArrayLiteral() {
@@ -462,7 +510,7 @@ namespace InterpreterExam {
     public enum PRECEDENCES {
         LOWEST,
         EQUALS,
-        LESSGREATER,
+        LESS_GREATER,
         SUM,
         PRODUCT,
         PREFIX,

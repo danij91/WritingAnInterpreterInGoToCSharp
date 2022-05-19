@@ -41,11 +41,36 @@ namespace InterpreterExam {
         }
     }
 
-    public struct LetStatement : Statement {
+    public struct DataStatement : Statement {
         public Token Token;
         public Identifier Name;
         public Expression Value;
+        public void statementNode() { }
 
+        public string String() {
+            var buffer = "";
+            buffer += TokenLiteral() + " ";
+            buffer += Name.String();
+            buffer += " = ";
+
+            if (Value != null) {
+                buffer += Value.String();
+            }
+
+            buffer += ";";
+
+            return buffer;
+        }
+
+        public string TokenLiteral() {
+            return Token.Literal;
+        }
+    }
+
+    public struct AssignStatement : Statement {
+        public Token Token;
+        public Identifier Name;
+        public Expression Value;
         public void statementNode() { }
 
         public string String() {
@@ -161,6 +186,36 @@ namespace InterpreterExam {
     public struct StringLiteral : Expression {
         public Token Token;
         public string Value;
+
+        public string TokenLiteral() {
+            return Token.Literal;
+        }
+
+        public string String() {
+            return Token.Literal;
+        }
+
+        public void expressionNode() { }
+    }
+
+    public struct CharacterLiteral : Expression {
+        public Token Token;
+        public char Value;
+
+        public string TokenLiteral() {
+            return Token.Literal;
+        }
+
+        public string String() {
+            return Token.Literal;
+        }
+
+        public void expressionNode() { }
+    }
+
+    public struct RealNumberLiteral : Expression {
+        public Token Token;
+        public float Value;
 
         public string TokenLiteral() {
             return Token.Literal;
