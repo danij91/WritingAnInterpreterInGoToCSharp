@@ -48,10 +48,40 @@ namespace InterpreterExam {
 
                     break;
                 case (byte)'+':
-                    tok = new Token(TokenType.PLUS, (char)ch + "");
+                    if (peekChar() == '+') {
+                        var tempCh = ch;
+                        readChar();
+                        var literal = "" + (char)tempCh + (char)ch;
+                        tok = new Token(TokenType.INCREMENT, literal);
+                    }
+                    else if(peekChar() == '=') {
+                        var tempCh = ch;
+                        readChar();
+                        var literal = "" + (char)tempCh + (char)ch;
+                        tok = new Token(TokenType.ASSIGN, literal);
+                    }
+                    else {
+                        tok = new Token(TokenType.PLUS, (char)ch + "");
+                    }
+                    
                     break;
                 case (byte)'-':
-                    tok = new Token(TokenType.MINUS, (char)ch + "");
+                    if (peekChar() == '-') {
+                        var tempCh = ch;
+                        readChar();
+                        var literal = "" + (char)tempCh + (char)ch;
+                        tok = new Token(TokenType.DECREMENT, literal);
+                    }
+                    else if(peekChar() == '=') {
+                        var tempCh = ch;
+                        readChar();
+                        var literal = "" + (char)tempCh + (char)ch;
+                        tok = new Token(TokenType.ASSIGN, literal);
+                    }
+                    else {
+                        tok = new Token(TokenType.MINUS, (char)ch + "");
+                    }
+                    
                     break;
                 case (byte)'!':
                     if (peekChar() == '=') {
@@ -66,10 +96,26 @@ namespace InterpreterExam {
 
                     break;
                 case (byte)'/':
-                    tok = new Token(TokenType.SLASH, (char)ch + "");
+                    if (peekChar() == '=') {
+                        var tempCh = ch;
+                        readChar();
+                        var literal = "" + (char)tempCh + (char)ch;
+                        tok = new Token(TokenType.ASSIGN, literal);
+                    }
+                    else {
+                        tok = new Token(TokenType.SLASH, (char)ch + "");
+                    }
                     break;
                 case (byte)'*':
-                    tok = new Token(TokenType.ASTERISK, (char)ch + "");
+                    if (peekChar() == '=') {
+                        var tempCh = ch;
+                        readChar();
+                        var literal = "" + (char)tempCh + (char)ch;
+                        tok = new Token(TokenType.ASSIGN, literal);
+                    }
+                    else {
+                        tok = new Token(TokenType.ASTERISK, (char)ch + "");
+                    }
                     break;
                 case (byte)'<':
                     tok = new Token(TokenType.LT, (char)ch + "");

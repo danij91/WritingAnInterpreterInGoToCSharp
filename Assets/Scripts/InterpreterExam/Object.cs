@@ -137,9 +137,10 @@ namespace InterpreterExam {
     }
 
     public struct Function : Object {
-        public List<Identifier> Parameters;
+        public Dictionary<Identifier, ObjectType> Parameters;
         public BlockStatement Body;
         public Environment Env;
+        public ObjectType ReturnType;
 
         public ObjectType Type() {
             return ObjectType.FUNCTION_OBJ;
@@ -148,9 +149,9 @@ namespace InterpreterExam {
         public string Inspect() {
             var buffer = "";
 
-            var Params = Parameters.Select(parameter => parameter.String()).ToList();
+            var Params = Parameters.Select(parameter => parameter.Value).ToList();
 
-            buffer += "fn";
+            buffer += ReturnType + " function";
             buffer += "(";
             buffer += string.Join(", ", Params);
             buffer += ") {\n";
@@ -227,6 +228,7 @@ namespace InterpreterExam {
         BOOLEAN_OBJ,
         CHARACTER_OBJ,
         REAL_NUMBER_OBJ,
+        VOID_OBJ,
         NULL_OBJ,
         RETURN_VALUE_OBJ,
         ERROR_OBJ,

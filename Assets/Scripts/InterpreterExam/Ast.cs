@@ -45,32 +45,7 @@ namespace InterpreterExam {
         public Token Token;
         public Identifier Name;
         public Expression Value;
-        public void statementNode() { }
-
-        public string String() {
-            var buffer = "";
-            buffer += TokenLiteral() + " ";
-            buffer += Name.String();
-            buffer += " = ";
-
-            if (Value != null) {
-                buffer += Value.String();
-            }
-
-            buffer += ";";
-
-            return buffer;
-        }
-
-        public string TokenLiteral() {
-            return Token.Literal;
-        }
-    }
-
-    public struct AssignStatement : Statement {
-        public Token Token;
-        public Identifier Name;
-        public Expression Value;
+        public string assignOperator;
         public void statementNode() { }
 
         public string String() {
@@ -277,6 +252,30 @@ namespace InterpreterExam {
         }
     }
 
+    public struct PostfixExpression : Expression {
+        public Token Token;
+        public Expression Left;
+        public string Operator;
+
+        public string TokenLiteral() {
+            throw new NotImplementedException();
+        }
+
+        public string String() {
+            var buffer = "";
+            buffer += "(";
+            buffer += Left.String();
+            buffer += " " + Operator;
+            buffer += ")";
+
+            return buffer;
+        }
+
+        public void expressionNode() {
+            throw new NotImplementedException();
+        }
+    }
+
     public struct BooleanExpression : Expression {
         public Token Token;
         public bool Value;
@@ -327,8 +326,9 @@ namespace InterpreterExam {
 
     public struct FunctionLiteralExpression : Expression {
         public Token Token;
-        public List<Identifier> Parameters;
+        public Dictionary<Identifier, TokenType> Parameters;
         public BlockStatement Body;
+        public TokenType ReturnType;
 
         public string TokenLiteral() {
             return Token.Literal;
@@ -338,7 +338,7 @@ namespace InterpreterExam {
             var buffer = "";
             List<string> Params = new List<string>();
             foreach (var parameter in Parameters) {
-                Params.Add(parameter.String());
+                Params.Add(parameter.Value + " " + parameter.Key.String());
             }
 
             buffer += TokenLiteral();

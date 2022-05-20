@@ -6,16 +6,17 @@ using UnityEngine;
 namespace InterpreterExam {
     public static class Tokenizer {
         private static Dictionary<string, TokenType> kewords = new Dictionary<string, TokenType>() {
-            {"fn", TokenType.FUNCTION},
             {"int", TokenType.INT},
             {"float", TokenType.FLOAT},
             {"char", TokenType.CHAR},
             {"bool", TokenType.BOOL},
+            {"void", TokenType.VOID},
             {"true", TokenType.TRUE},
             {"false", TokenType.FALSE},
             {"if", TokenType.IF},
             {"else", TokenType.ELSE},
             {"return", TokenType.RETURN},
+            {"for", TokenType.FOR},
         };
 
         public static TokenType LookupIdent(string ident) {
@@ -68,6 +69,7 @@ namespace InterpreterExam {
         CHAR,
         FLOAT,
         BOOL,
+        VOID,
 
         //연산자
         ASSIGN,
@@ -80,6 +82,8 @@ namespace InterpreterExam {
         GT,
         EQ,
         NOT_EQ,
+        INCREMENT,
+        DECREMENT,
 
         //구분자
         COMMA,
@@ -101,11 +105,11 @@ namespace InterpreterExam {
         REAL_NUMBER,
 
         //키워드
-        FUNCTION,
         TRUE,
         FALSE,
         IF,
         ELSE,
-        RETURN
+        RETURN,
+        FOR,
     }
 }

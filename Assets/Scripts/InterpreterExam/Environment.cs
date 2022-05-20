@@ -18,23 +18,25 @@ namespace InterpreterExam {
 
             return new Tuple<Object, bool>(isExist ? store[name] : null, isExist);
         }
-        
+
         public Object Set(string name, Object val, ObjectType type) {
             switch (type) {
                 case ObjectType.INTEGER_OBJ:
-                    val = ParseInt(name, val);
+                    val = ParseInt(val);
                     break;
                 case ObjectType.REAL_NUMBER_OBJ:
-                    val = PalseFloat(name, val);
+                    val = PalseFloat(val);
                     break;
                 case ObjectType.BOOLEAN_OBJ:
-                    val = ParseBool(name, val);
+                    val = ParseBool(val);
                     break;
                 case ObjectType.CHARACTER_OBJ:
-                    val = ParseChar(name, val);
+                    val = ParseChar(val);
+                    break;
+                case ObjectType.VOID_OBJ:
                     break;
                 default:
-                    return Evaluator.newError($"invalid data type : '{val.Type()}'");
+                    return Evaluator.newError($"invalid data type : '{type}'");
             }
 
             if (val.Type() == ObjectType.ERROR_OBJ) {
@@ -52,8 +54,15 @@ namespace InterpreterExam {
             return val;
         }
 
-        private Object ParseInt(string name, Object val) {
+        private Object ParseInt(Object val) {
             switch (val.Type()) {
+                case ObjectType.FUNCTION_OBJ:
+                    var functionObj = (Function)val;
+                    if (functionObj.ReturnType != ObjectType.INTEGER_OBJ) {
+                        return Evaluator.newError($"invalid data type : '{val.Type()}'");
+                    }
+
+                    break;
                 case ObjectType.INTEGER_OBJ:
                     break;
                 case ObjectType.REAL_NUMBER_OBJ:
@@ -75,8 +84,14 @@ namespace InterpreterExam {
             return val;
         }
 
-        private Object PalseFloat(string name, Object val) {
+        private Object PalseFloat(Object val) {
             switch (val.Type()) {
+                case ObjectType.FUNCTION_OBJ:
+                    var functionObj = (Function)val;
+                    if (functionObj.ReturnType != ObjectType.REAL_NUMBER_OBJ) {
+                        return Evaluator.newError($"invalid data type : '{val.Type()}'");
+                    }
+                    break;
                 case ObjectType.INTEGER_OBJ:
                     var integerObj = (Integer)val;
                     val = new RealNumber {Value = integerObj.Value};
@@ -99,8 +114,15 @@ namespace InterpreterExam {
             return val;
         }
 
-        private Object ParseChar(string name, Object val) {
+        private Object ParseChar(Object val) {
             switch (val.Type()) {
+                case ObjectType.FUNCTION_OBJ:
+                    var functionObj = (Function)val;
+                    if (functionObj.ReturnType != ObjectType.CHARACTER_OBJ) {
+                        return Evaluator.newError($"invalid data type : '{val.Type()}'");
+                    }
+
+                    break;
                 case ObjectType.INTEGER_OBJ:
                     var integerObj = (Integer)val;
                     val = new Character {Value = (char)integerObj.Value};
@@ -123,8 +145,15 @@ namespace InterpreterExam {
             return val;
         }
 
-        private Object ParseBool(string name, Object val) {
+        private Object ParseBool(Object val) {
             switch (val.Type()) {
+                case ObjectType.FUNCTION_OBJ:
+                    var functionObj = (Function)val;
+                    if (functionObj.ReturnType != ObjectType.BOOLEAN_OBJ) {
+                        return Evaluator.newError($"invalid data type : '{val.Type()}'");
+                    }
+
+                    break;
                 case ObjectType.INTEGER_OBJ:
                     var integerObj = (Integer)val;
                     val = new Boolean {Value = integerObj.Value != 0};

@@ -32,7 +32,7 @@ namespace InterpreterExam {
                         return prefixRight;
                     }
 
-                    return evalPrefixExpression(prefixExpression.Operator, prefixRight);
+                    return evalPrefixExpression(prefixExpression, prefixRight, env);
                 case InfixExpression infixExpression:
                     Object infixLeft = Eval(infixExpression.Left, env);
                     if (isError(infixLeft)) {
@@ -45,6 +45,14 @@ namespace InterpreterExam {
                     }
 
                     return evalInfixExpression(infixExpression.Operator, infixLeft, infixRight);
+                case PostfixExpression postfixExpression:
+                    Object postFixLeft = Eval(postfixExpression.Left, env);
+
+                    if (isError(postFixLeft)) {
+                        return postFixLeft;
+                    }
+
+                    return evalPostfixExpression(postfixExpression, postFixLeft, env);
                 case BlockStatement blockStatement:
                     return evalBlockStatement(blockStatement, env);
                 case IfExpression ifExpression:
@@ -61,18 +69,14 @@ namespace InterpreterExam {
                 case Identifier identifier:
                     return evalIdentifier(identifier, env);
                 case FunctionLiteralExpression functionLiteral:
-                    var Params = functionLiteral.Parameters;
-                    var body = functionLiteral.Body;
-                    return new Function {Parameters = Params, Env = env, Body = body};
+                    return evalFunctionLiteral(functionLiteral, env);
                 case CallExpression callExpression:
                     var function = Eval(callExpression.Function, env);
-
                     if (isError(function)) {
                         return function;
                     }
 
                     var args = evalExpressions(callExpression.Arguments, env);
-
                     if (args.Count == 1 && isError(args[0])) {
                         return args[0];
                     }
@@ -140,7 +144,7 @@ namespace InterpreterExam {
                 }
             }
 
-            return result;
+            return NULL;
         }
 
         private Object evalDataStatement(DataStatement dataStatement, Environment env) {
@@ -164,6 +168,9 @@ namespace InterpreterExam {
                 case TokenType.FLOAT:
                     dataType = ObjectType.REAL_NUMBER_OBJ;
                     break;
+                case TokenType.VOID:
+                    dataType = ObjectType.VOID_OBJ;
+                    break;
                 case TokenType.IDENT:
                     var getValueTuple = env.Get(dataStatement.Name.Value);
                     if (!getValueTuple.Item2) {
@@ -176,6 +183,33 @@ namespace InterpreterExam {
                     return NULL;
             }
 
+            if (dataStatement.assignOperator != "=" && !string.IsNullOrEmpty(dataStatement.assignOperator)) {
+                Debug.Log(dataStatement.assignOperator);
+                var getValueTuple = env.Get(dataStatement.Name.Value);
+                if (!getValueTuple.Item2) {
+                    return newError($"'{dataStatement.Name.Value}' was not declared in this scope");
+                }
+
+                var orgVal = GetNumberObjectValue(getValueTuple.Item1);
+                var diffVal = GetNumberObjectValue(letVal);
+
+                switch (dataStatement.assignOperator) {
+                    case "+=":
+                        letVal = new RealNumber {Value = orgVal + diffVal};
+                        break;
+                    case "-=":
+                        letVal = new RealNumber {Value = orgVal - diffVal};
+                        break;
+                    case "*=":
+                        letVal = new RealNumber {Value = orgVal * diffVal};
+                        break;
+                    case "/=":
+                        letVal = new RealNumber {Value = orgVal / diffVal};
+                        break;
+                }
+            }
+
+
             return env.Set(dataStatement.Name.Value, letVal, dataType);
         }
 
@@ -183,14 +217,18 @@ namespace InterpreterExam {
             return input ? TRUE : FALSE;
         }
 
-        private Object evalPrefixExpression(string Operator, Object right) {
-            switch (Operator) {
+        private Object evalPrefixExpression(PrefixExpression prefixExpression, Object right, Environment env) {
+            switch (prefixExpression.Operator) {
                 case "!":
                     return evalBangOperatorExpression(right);
                 case "-":
                     return evalMinusPrefixOperatorExpression(right);
+                case "++":
+                    return evalIncreasePrefixOperatorExpression(prefixExpression.Right, right, env);
+                case "--":
+                    return evalDecreasePrefixOperatorExpression(prefixExpression.Right, right, env);
                 default:
-                    return newError($"unknown operator: {Operator}{right.Type()}");
+                    return newError($"unknown operator: {prefixExpression.Operator}{right.Type()}");
             }
         }
 
@@ -211,12 +249,38 @@ namespace InterpreterExam {
         }
 
         private Object evalMinusPrefixOperatorExpression(Object right) {
-            if (right.Type() != ObjectType.INTEGER_OBJ) {
+            if (!IsNumber(right)) {
                 return newError($"unknown operator: -{right.Type()}");
             }
 
-            var value = ((Integer)right).Value;
-            return new Integer {Value = -value};
+            var value = GetNumberObjectValue(right);
+            return new RealNumber {Value = -value};
+        }
+
+        private Object evalIncreasePrefixOperatorExpression(Expression rightExpression, Object right, Environment env) {
+            if (!IsNumber(right) || !(rightExpression is Identifier)) {
+                return newError($"unknown operator: ++{right.Type()}");
+            }
+
+            var ident = (Identifier)rightExpression;
+
+            var value = GetNumberObjectValue(right);
+            right = new RealNumber {Value = value + 1};
+            env.Set(ident.Value, right, right.Type());
+            return right;
+        }
+
+        private Object evalDecreasePrefixOperatorExpression(Expression rightExpression, Object right, Environment env) {
+            if (!IsNumber(right) || !(rightExpression is Identifier)) {
+                return newError($"unknown operator: ++{right.Type()}");
+            }
+
+            var ident = (Identifier)rightExpression;
+
+            var value = GetNumberObjectValue(right);
+            right = new RealNumber {Value = value - 1};
+            env.Set(ident.Value, right, right.Type());
+            return right;
         }
 
         private Object evalInfixExpression(string Operator, Object left, Object right) {
@@ -277,6 +341,41 @@ namespace InterpreterExam {
             var rightVal = ((String)right).Value;
 
             return new String {Value = leftVal + rightVal};
+        }
+
+        private Object evalPostfixExpression(PostfixExpression postfixExpression, Object left, Environment env) {
+            switch (postfixExpression.Operator) {
+                case "++":
+                    return evalIncreasePostfixOperatorExpression(postfixExpression.Left, left, env);
+                case "--":
+                    return evalDecreasePostfixOperatorExpression(postfixExpression.Left, left, env);
+                default:
+                    return newError($"unknown operator: {postfixExpression.Operator}{left.Type()}");
+            }
+        }
+
+        private Object evalIncreasePostfixOperatorExpression(Expression rightExpression, Object left, Environment env) {
+            if (!IsNumber(left) || !(rightExpression is Identifier)) {
+                return newError($"unknown operator: ++{left.Type()}");
+            }
+
+            var ident = (Identifier)rightExpression;
+
+            var value = GetNumberObjectValue(left);
+            env.Set(ident.Value, new RealNumber {Value = value + 1}, left.Type());
+            return left;
+        }
+
+        private Object evalDecreasePostfixOperatorExpression(Expression leftExpression, Object left, Environment env) {
+            if (!IsNumber(left) || !(leftExpression is Identifier)) {
+                return newError($"unknown operator: --{left.Type()}");
+            }
+
+            var ident = (Identifier)leftExpression;
+
+            var value = GetNumberObjectValue(left);
+            env.Set(ident.Value, new RealNumber {Value = value - 1}, left.Type());
+            return left;
         }
 
         private Object evalIfExpression(IfExpression ie, Environment env) {
@@ -413,6 +512,17 @@ namespace InterpreterExam {
             return new Hash {Pairs = pairs};
         }
 
+        private Object evalFunctionLiteral(FunctionLiteralExpression functionLiteral, Environment env) {
+            var Params = functionLiteral.Parameters.ToDictionary(parameter => parameter.Key,
+                parameter => GetObjectTypeByTokenType(parameter.Value));
+            var body = functionLiteral.Body;
+
+            return new Function {
+                Parameters = Params, Env = env, Body = body,
+                ReturnType = GetObjectTypeByTokenType(functionLiteral.ReturnType)
+            };
+        }
+
         private Object applyFunction(Object fn, List<Object> args) {
             switch (fn) {
                 case Function function:
@@ -429,8 +539,10 @@ namespace InterpreterExam {
         private Environment extendedFunctionEnv(Function fn, List<Object> args) {
             var env = NewEnclosedEnvironment(fn.Env);
 
-            for (int i = 0; i < fn.Parameters.Count; i++) {
-                env.Set(fn.Parameters[i].Value, args[i], ObjectType.FUNCTION_OBJ);
+            int i = 0;
+            foreach (var parameter in fn.Parameters) {
+                env.Set(parameter.Key.Value, args[i], parameter.Value);
+                i++;
             }
 
             return env;
@@ -474,6 +586,23 @@ namespace InterpreterExam {
                     return true;
                 default:
                     return false;
+            }
+        }
+
+        private ObjectType GetObjectTypeByTokenType(TokenType tokenType) {
+            switch (tokenType) {
+                case TokenType.INT:
+                    return ObjectType.INTEGER_OBJ;
+                case TokenType.FLOAT:
+                    return ObjectType.REAL_NUMBER_OBJ;
+                case TokenType.BOOL:
+                    return ObjectType.BOOLEAN_OBJ;
+                case TokenType.CHAR:
+                    return ObjectType.CHARACTER_OBJ;
+                case TokenType.VOID:
+                    return ObjectType.VOID_OBJ;
+                default:
+                    return ObjectType.ERROR_OBJ;
             }
         }
     }

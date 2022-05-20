@@ -26,7 +26,9 @@ namespace InterpreterExam {
             {TokenType.SLASH, PRECEDENCES.PRODUCT},
             {TokenType.ASTERISK, PRECEDENCES.PRODUCT},
             {TokenType.LPAREN, PRECEDENCES.CALL},
-            {TokenType.LBRACKET, PRECEDENCES.INDEX}
+            {TokenType.LBRACKET, PRECEDENCES.INDEX},
+            {TokenType.INCREMENT, PRECEDENCES.CALL},
+            {TokenType.DECREMENT, PRECEDENCES.CALL},
         };
 
         public Parser(Lexer l) {
@@ -38,11 +40,12 @@ namespace InterpreterExam {
             registerPrefix(TokenType.CHARACTER, parseCharacterLiteral);
             registerPrefix(TokenType.BANG, parsePrefixExpression);
             registerPrefix(TokenType.MINUS, parsePrefixExpression);
+            registerPrefix(TokenType.INCREMENT, parsePrefixExpression);
+            registerPrefix(TokenType.DECREMENT, parsePrefixExpression);
             registerPrefix(TokenType.TRUE, parseBooleanExpression);
             registerPrefix(TokenType.FALSE, parseBooleanExpression);
             registerPrefix(TokenType.LPAREN, parseGroupedExpression);
             registerPrefix(TokenType.IF, parseIfExpression);
-            registerPrefix(TokenType.FUNCTION, parseFunctionLiteralExpression);
             registerPrefix(TokenType.STRING, parseStringLiteral);
             registerPrefix(TokenType.LBRACKET, parseArrayLiteral);
             registerPrefix(TokenType.LBRACE, parseHashLiteral);
@@ -51,6 +54,8 @@ namespace InterpreterExam {
             registerInfix(TokenType.MINUS, parseInfixExpression);
             registerInfix(TokenType.SLASH, parseInfixExpression);
             registerInfix(TokenType.ASTERISK, parseInfixExpression);
+            registerInfix(TokenType.INCREMENT, parsePostfixExpression);
+            registerInfix(TokenType.DECREMENT, parsePostfixExpression);
             registerInfix(TokenType.EQ, parseInfixExpression);
             registerInfix(TokenType.NOT_EQ, parseInfixExpression);
             registerInfix(TokenType.LT, parseInfixExpression);
@@ -92,12 +97,13 @@ namespace InterpreterExam {
                 case TokenType.CHAR:
                 case TokenType.FLOAT:
                 case TokenType.INT:
-                    return parseDataStateMent();
+                case TokenType.VOID:
+                    return parseInitDataStateMent();
                 case TokenType.RETURN:
                     return parseReturnStatement();
                 case TokenType.IDENT:
                     if (peekTokenIs(TokenType.ASSIGN)) {
-                        return parseDataStateMent();
+                        return parseAssignDataStatement();
                     }
 
                     return parseExpressionStatement();
@@ -106,29 +112,52 @@ namespace InterpreterExam {
             }
         }
 
-        private DataStatement? parseDataStateMent() {
+        private DataStatement? parseAssignDataStatement() {
             var stmt = new DataStatement {
                 Token = curToken
             };
 
-            if (peekTokenIs(TokenType.IDENT)) {
+            stmt.Name = new Identifier(curToken, curToken.Literal);
+
+            if (!peekTokenIs(TokenType.ASSIGN)) {
+                return null;
+            }
+            
+            NextToken();
+            stmt.assignOperator = curToken.Literal;
+            NextToken();
+            stmt.Value = parseExpression(PRECEDENCES.LOWEST);
+
+            if (peekTokenIs(TokenType.SEMICOLON)) {
                 NextToken();
             }
-            else if (!peekTokenIs(TokenType.ASSIGN)) {
-                NextToken();
+
+            return stmt;
+        }
+
+        private DataStatement? parseInitDataStateMent() {
+            var stmt = new DataStatement {
+                Token = curToken
+            };
+
+            if (!expectPeek(TokenType.IDENT)) {
                 return null;
             }
 
             stmt.Name = new Identifier(curToken, curToken.Literal);
 
-
-            if (!expectPeek(TokenType.ASSIGN)) {
+            if (peekTokenIs(TokenType.LPAREN)) {
+                stmt.Value = parseFunctionLiteralExpression(stmt.Token.Type);
+            }
+            else if (peekTokenIs(TokenType.ASSIGN)) {
+                NextToken();
+                stmt.assignOperator = curToken.Literal;
+                NextToken();
+                stmt.Value = parseExpression(PRECEDENCES.LOWEST);
+            }
+            else {
                 return null;
             }
-
-            NextToken();
-
-            stmt.Value = parseExpression(PRECEDENCES.LOWEST);
 
             if (peekTokenIs(TokenType.SEMICOLON)) {
                 NextToken();
@@ -304,6 +333,15 @@ namespace InterpreterExam {
             return expression;
         }
 
+        private Expression parsePostfixExpression(Expression left) {
+            var expression = new PostfixExpression() {
+                Token = curToken,
+                Operator = curToken.Literal,
+                Left = left,
+            };
+            return expression;
+        }
+
         private Expression parseBooleanExpression() {
             return new BooleanExpression {Token = curToken, Value = curTokenIs(TokenType.TRUE)};
         }
@@ -346,9 +384,8 @@ namespace InterpreterExam {
             return expression;
         }
 
-        private Expression parseFunctionLiteralExpression() {
-            var lit = new FunctionLiteralExpression {Token = curToken};
-
+        private Expression parseFunctionLiteralExpression(TokenType type) {
+            var lit = new FunctionLiteralExpression {Token = curToken, ReturnType = type};
             if (!expectPeek(TokenType.LPAREN))
                 return null;
 
@@ -362,8 +399,8 @@ namespace InterpreterExam {
             return lit;
         }
 
-        private List<Identifier> parseFunctionParameters() {
-            var identifiers = new List<Identifier>();
+        private Dictionary<Identifier, TokenType> parseFunctionParameters() {
+            var identifiers = new Dictionary<Identifier, TokenType>();
 
             if (peekTokenIs(TokenType.RPAREN)) {
                 NextToken();
@@ -371,14 +408,17 @@ namespace InterpreterExam {
             }
 
             NextToken();
-
+            var variableType = curToken.Type;
+            NextToken();
             var ident = new Identifier {Token = curToken, Value = curToken.Literal};
-            identifiers.Add(ident);
+            identifiers.Add(ident, variableType);
             while (peekTokenIs(TokenType.COMMA)) {
                 NextToken();
                 NextToken();
+                variableType = curToken.Type;
+                NextToken();
                 ident = new Identifier {Token = curToken, Value = curToken.Literal};
-                identifiers.Add(ident);
+                identifiers.Add(ident, variableType);
             }
 
             if (!expectPeek(TokenType.RPAREN))
