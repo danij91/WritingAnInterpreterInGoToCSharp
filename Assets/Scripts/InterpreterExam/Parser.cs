@@ -33,7 +33,6 @@ namespace InterpreterExam {
 
         public Parser(Lexer l) {
             this.l = l;
-
             registerPrefix(TokenType.IDENT, parseIdentifier);
             registerPrefix(TokenType.INTEGER, parseIntegerLiteral);
             registerPrefix(TokenType.REAL_NUMBER, parseRealNumberLiteral);
@@ -46,6 +45,8 @@ namespace InterpreterExam {
             registerPrefix(TokenType.FALSE, parseBooleanExpression);
             registerPrefix(TokenType.LPAREN, parseGroupedExpression);
             registerPrefix(TokenType.IF, parseIfExpression);
+            registerPrefix(TokenType.FOR, parseForExpression);
+            registerPrefix(TokenType.WHILE, parseWhileExpression);
             registerPrefix(TokenType.STRING, parseStringLiteral);
             registerPrefix(TokenType.LBRACKET, parseArrayLiteral);
             registerPrefix(TokenType.LBRACE, parseHashLiteral);
@@ -101,6 +102,8 @@ namespace InterpreterExam {
                     return parseInitDataStateMent();
                 case TokenType.RETURN:
                     return parseReturnStatement();
+                case TokenType.BREAK:
+                    return parseBreakStatement();
                 case TokenType.IDENT:
                     if (peekTokenIs(TokenType.ASSIGN)) {
                         return parseAssignDataStatement();
@@ -112,8 +115,8 @@ namespace InterpreterExam {
             }
         }
 
-        private DataStatement? parseAssignDataStatement() {
-            var stmt = new DataStatement {
+        private AssignStatement? parseAssignDataStatement() {
+            var stmt = new AssignStatement {
                 Token = curToken
             };
 
@@ -122,7 +125,7 @@ namespace InterpreterExam {
             if (!peekTokenIs(TokenType.ASSIGN)) {
                 return null;
             }
-            
+
             NextToken();
             stmt.assignOperator = curToken.Literal;
             NextToken();
@@ -135,8 +138,8 @@ namespace InterpreterExam {
             return stmt;
         }
 
-        private DataStatement? parseInitDataStateMent() {
-            var stmt = new DataStatement {
+        private InitStatement? parseInitDataStateMent() {
+            var stmt = new InitStatement {
                 Token = curToken
             };
 
@@ -151,7 +154,6 @@ namespace InterpreterExam {
             }
             else if (peekTokenIs(TokenType.ASSIGN)) {
                 NextToken();
-                stmt.assignOperator = curToken.Literal;
                 NextToken();
                 stmt.Value = parseExpression(PRECEDENCES.LOWEST);
             }
@@ -174,6 +176,18 @@ namespace InterpreterExam {
             NextToken();
 
             stmt.ReturnValue = parseExpression(PRECEDENCES.LOWEST);
+
+            if (peekTokenIs(TokenType.SEMICOLON)) {
+                NextToken();
+            }
+
+            return stmt;
+        }
+
+        private BreakStatement parseBreakStatement() {
+            var stmt = new BreakStatement {
+                Token = curToken
+            };
 
             if (peekTokenIs(TokenType.SEMICOLON)) {
                 NextToken();
@@ -380,6 +394,64 @@ namespace InterpreterExam {
 
                 expression.Alternative = parseBlockStatement();
             }
+
+            return expression;
+        }
+
+        private Expression parseForExpression() {
+            var expression = new IterationExpression {Token = curToken};
+
+            if (!expectPeek(TokenType.LPAREN))
+                return null;
+
+            NextToken();
+
+            if (!curTokenIs(TokenType.SEMICOLON)) {
+                expression.InitStatement = parseStatement();
+            }
+
+            NextToken();
+
+            if (!curTokenIs(TokenType.SEMICOLON)) {
+                expression.Condition = parseExpression(PRECEDENCES.LOWEST);
+                NextToken();
+            }
+
+            if (!peekTokenIs(TokenType.RPAREN)) {
+                NextToken();
+                expression.Change = parseExpression(PRECEDENCES.LOWEST);
+            }
+
+            if (!expectPeek(TokenType.RPAREN))
+                return null;
+
+            if (!expectPeek(TokenType.LBRACE))
+                return null;
+
+            expression.IterationBlockStatement = parseBlockStatement();
+
+            return expression;
+        }
+
+        private Expression parseWhileExpression() {
+            var expression = new IterationExpression {Token = curToken};
+
+            if (!expectPeek(TokenType.LPAREN))
+                return null;
+
+            if (peekTokenIs(TokenType.RPAREN)) {
+                var msg = $"expected primary-expression before {TokenType.RPAREN} token";
+                errors.Add(msg);
+                return null;
+            }
+            
+            expression.Condition = parseExpression(PRECEDENCES.LOWEST);
+            
+            if (!curTokenIs(TokenType.RPAREN))
+                return null;
+            if (!expectPeek(TokenType.LBRACE))
+                return null;
+            expression.IterationBlockStatement = parseBlockStatement();
 
             return expression;
         }

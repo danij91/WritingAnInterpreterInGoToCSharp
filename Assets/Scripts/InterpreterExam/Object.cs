@@ -124,6 +124,16 @@ namespace InterpreterExam {
         }
     }
 
+    public struct Break : Object {
+        public ObjectType Type() {
+            return ObjectType.BREAK_OBJ;
+        }
+
+        public string Inspect() {
+            return "break;";
+        }
+    }
+
     public struct Error : Object {
         public string Message;
 
@@ -231,6 +241,7 @@ namespace InterpreterExam {
         VOID_OBJ,
         NULL_OBJ,
         RETURN_VALUE_OBJ,
+        BREAK_OBJ,
         ERROR_OBJ,
         FUNCTION_OBJ,
         STRING_OBJ,

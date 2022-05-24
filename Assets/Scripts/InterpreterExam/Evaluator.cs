@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using UnityEngine;
 
@@ -27,7 +28,6 @@ namespace InterpreterExam {
                     return new RealNumber {Value = realNumberLiteral.Value};
                 case PrefixExpression prefixExpression:
                     Object prefixRight = Eval(prefixExpression.Right, env);
-
                     if (isError(prefixRight)) {
                         return prefixRight;
                     }
@@ -47,7 +47,6 @@ namespace InterpreterExam {
                     return evalInfixExpression(infixExpression.Operator, infixLeft, infixRight);
                 case PostfixExpression postfixExpression:
                     Object postFixLeft = Eval(postfixExpression.Left, env);
-
                     if (isError(postFixLeft)) {
                         return postFixLeft;
                     }
@@ -57,6 +56,8 @@ namespace InterpreterExam {
                     return evalBlockStatement(blockStatement, env);
                 case IfExpression ifExpression:
                     return evalIfExpression(ifExpression, env);
+                case IterationExpression forExpression:
+                    return evalIterationExpression(forExpression, env);
                 case ReturnStatement returnStatement:
                     Object returnVal = Eval(returnStatement.ReturnValue, env);
                     if (isError(returnVal)) {
@@ -64,8 +65,12 @@ namespace InterpreterExam {
                     }
 
                     return new ReturnValue {Value = returnVal};
-                case DataStatement dataStatement:
-                    return evalDataStatement(dataStatement, env);
+                case BreakStatement breakStatement:
+                    return new Break();
+                case AssignStatement assignStatement:
+                    return evalAssignStatement(assignStatement, env);
+                case InitStatement initStatement:
+                    return evalInitStatement(initStatement, env);
                 case Identifier identifier:
                     return evalIdentifier(identifier, env);
                 case FunctionLiteralExpression functionLiteral:
@@ -107,7 +112,7 @@ namespace InterpreterExam {
                 case HashLiteral hashLiteral:
                     return evalHashLiteral(hashLiteral, env);
                 default:
-                    return null;
+                    return NULL;
             }
         }
 
@@ -117,6 +122,7 @@ namespace InterpreterExam {
 
         private Object evalProgam(Program program, Environment env) {
             Object result = null;
+
             foreach (var statement in program.statements) {
                 result = Eval(statement, env);
 
@@ -137,6 +143,10 @@ namespace InterpreterExam {
             foreach (var statement in block.Statements) {
                 result = Eval(statement, env);
 
+                if (result is Break) {
+                    return result;
+                }
+
                 if (result != null) {
                     var rt = result.Type();
                     if (rt == ObjectType.RETURN_VALUE_OBJ || rt == ObjectType.ERROR_OBJ)
@@ -147,15 +157,50 @@ namespace InterpreterExam {
             return NULL;
         }
 
-        private Object evalDataStatement(DataStatement dataStatement, Environment env) {
-            Object letVal = Eval(dataStatement.Value, env);
+        private Object evalAssignStatement(AssignStatement assignStatement, Environment env) {
+            Object assignVal = Eval(assignStatement.Value, env);
+            if (isError(assignVal)) {
+                return assignVal;
+            }
+
+            var getValue = env.Get(assignStatement.Name.Value);
+
+            if (isError(getValue)) {
+                return getValue;
+            }
+
+            if (assignStatement.assignOperator != "=" && !string.IsNullOrEmpty(assignStatement.assignOperator)) {
+                var orgVal = GetNumberObjectValue(getValue);
+                var diffVal = GetNumberObjectValue(assignVal);
+
+                switch (assignStatement.assignOperator) {
+                    case "+=":
+                        assignVal = new RealNumber {Value = orgVal + diffVal};
+                        break;
+                    case "-=":
+                        assignVal = new RealNumber {Value = orgVal - diffVal};
+                        break;
+                    case "*=":
+                        assignVal = new RealNumber {Value = orgVal * diffVal};
+                        break;
+                    case "/=":
+                        assignVal = new RealNumber {Value = orgVal / diffVal};
+                        break;
+                }
+            }
+
+            return env.Set(assignStatement.Name.Value, assignVal);
+        }
+
+        private Object evalInitStatement(InitStatement initStatement, Environment env) {
+            Object letVal = Eval(initStatement.Value, env);
             if (isError(letVal)) {
                 return letVal;
             }
 
             ObjectType dataType;
 
-            switch (dataStatement.Token.Type) {
+            switch (initStatement.Token.Type) {
                 case TokenType.INT:
                     dataType = ObjectType.INTEGER_OBJ;
                     break;
@@ -171,46 +216,11 @@ namespace InterpreterExam {
                 case TokenType.VOID:
                     dataType = ObjectType.VOID_OBJ;
                     break;
-                case TokenType.IDENT:
-                    var getValueTuple = env.Get(dataStatement.Name.Value);
-                    if (!getValueTuple.Item2) {
-                        return newError($"'{dataStatement.Name.Value}' was not declared in this scope");
-                    }
-
-                    dataType = getValueTuple.Item1.Type();
-                    break;
                 default:
                     return NULL;
             }
 
-            if (dataStatement.assignOperator != "=" && !string.IsNullOrEmpty(dataStatement.assignOperator)) {
-                Debug.Log(dataStatement.assignOperator);
-                var getValueTuple = env.Get(dataStatement.Name.Value);
-                if (!getValueTuple.Item2) {
-                    return newError($"'{dataStatement.Name.Value}' was not declared in this scope");
-                }
-
-                var orgVal = GetNumberObjectValue(getValueTuple.Item1);
-                var diffVal = GetNumberObjectValue(letVal);
-
-                switch (dataStatement.assignOperator) {
-                    case "+=":
-                        letVal = new RealNumber {Value = orgVal + diffVal};
-                        break;
-                    case "-=":
-                        letVal = new RealNumber {Value = orgVal - diffVal};
-                        break;
-                    case "*=":
-                        letVal = new RealNumber {Value = orgVal * diffVal};
-                        break;
-                    case "/=":
-                        letVal = new RealNumber {Value = orgVal / diffVal};
-                        break;
-                }
-            }
-
-
-            return env.Set(dataStatement.Name.Value, letVal, dataType);
+            return env.Declare(initStatement.Name.Value, letVal, dataType);
         }
 
         private Boolean nativeBoolToBooleanObject(bool input) {
@@ -266,7 +276,7 @@ namespace InterpreterExam {
 
             var value = GetNumberObjectValue(right);
             right = new RealNumber {Value = value + 1};
-            env.Set(ident.Value, right, right.Type());
+            env.Set(ident.Value, right);
             return right;
         }
 
@@ -279,7 +289,7 @@ namespace InterpreterExam {
 
             var value = GetNumberObjectValue(right);
             right = new RealNumber {Value = value - 1};
-            env.Set(ident.Value, right, right.Type());
+            env.Set(ident.Value, right);
             return right;
         }
 
@@ -362,7 +372,7 @@ namespace InterpreterExam {
             var ident = (Identifier)rightExpression;
 
             var value = GetNumberObjectValue(left);
-            env.Set(ident.Value, new RealNumber {Value = value + 1}, left.Type());
+            env.Set(ident.Value, new RealNumber {Value = value + 1});
             return left;
         }
 
@@ -374,11 +384,13 @@ namespace InterpreterExam {
             var ident = (Identifier)leftExpression;
 
             var value = GetNumberObjectValue(left);
-            env.Set(ident.Value, new RealNumber {Value = value - 1}, left.Type());
+            env.Set(ident.Value, new RealNumber {Value = value - 1});
             return left;
         }
 
-        private Object evalIfExpression(IfExpression ie, Environment env) {
+        private Object evalIfExpression(IfExpression ie, Environment outer) {
+            var env = NewEnclosedEnvironment(outer);
+
             Object condition = Eval(ie.Condition, env);
 
             if (isError(condition)) {
@@ -391,6 +403,31 @@ namespace InterpreterExam {
 
             if (ie.Alternative != null) {
                 return Eval(ie.Alternative, env);
+            }
+
+            return NULL;
+        }
+
+        private Object evalIterationExpression(IterationExpression fe, Environment outer) {
+            var env = NewEnclosedEnvironment(outer);
+            Eval(fe.InitStatement, env);
+            Object condition = Eval(fe.Condition, env);
+            Eval(fe.Change, env);
+            int a = 0;
+            while (isTruthy(condition) || condition.Equals(NULL)) {
+                a++;
+                if (a > 100) {
+                    return newError("Stack overflow");
+                    break;
+                }
+                Eval(fe.Change, env);
+                var currentBlock = Eval(fe.IterationBlockStatement, env);
+
+                if (currentBlock is Break) {
+                    break;
+                }
+
+                condition = Eval(fe.Condition, env);
             }
 
             return NULL;
@@ -435,12 +472,9 @@ namespace InterpreterExam {
         }
 
         private Object evalIdentifier(Identifier node, Environment env) {
-            Tuple<Object, bool> temp = env.Get(node.Value);
-            Object val = temp.Item1;
-            bool ok = temp.Item2;
-
-            if (ok) {
-                return val;
+            var getValue = env.Get(node.Value);
+            if (!isError(getValue)) {
+                return getValue;
             }
 
             if (Builtins.builtins.ContainsKey(node.Value)) {
@@ -541,7 +575,7 @@ namespace InterpreterExam {
 
             int i = 0;
             foreach (var parameter in fn.Parameters) {
-                env.Set(parameter.Key.Value, args[i], parameter.Value);
+                env.Set(parameter.Key.Value, args[i]);
                 i++;
             }
 

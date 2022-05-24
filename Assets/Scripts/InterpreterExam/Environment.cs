@@ -7,19 +7,26 @@ namespace InterpreterExam {
     public class Environment {
         private Dictionary<string, Object> store = new Dictionary<string, Object>();
         private Dictionary<string, ObjectType> types = new Dictionary<string, ObjectType>();
+
         public Environment outer { get; set; }
 
-        public Tuple<Object, bool> Get(string name) {
-            var isExist = store.ContainsKey(name);
+        public Object Get(string name) {
+            if (!store.ContainsKey(name)) {
+                if (outer != null) {
+                    return outer.Get(name);
+                }
 
-            if (!isExist && outer != null) {
-                return outer.Get(name);
+                return Evaluator.newError($"'{name}' was not declared in this scope");
             }
 
-            return new Tuple<Object, bool>(isExist ? store[name] : null, isExist);
+            return store[name];
         }
 
-        public Object Set(string name, Object val, ObjectType type) {
+        public Object Declare(string name, Object val, ObjectType type) {
+            if (store.ContainsKey(name)) {
+                return Evaluator.newError($"'{name}' was already declared in this scope");
+            }
+
             switch (type) {
                 case ObjectType.INTEGER_OBJ:
                     val = ParseInt(val);
@@ -43,13 +50,47 @@ namespace InterpreterExam {
                 return val;
             }
 
-            if (store.ContainsKey(name) && types.ContainsKey(name)) {
-                store[name] = val;
+            types.Add(name, val.Type());
+            store.Add(name, val);
+
+            return val;
+        }
+
+        public Object Set(string name, Object val) {
+            var isExist = store.ContainsKey(name);
+
+            if (!isExist) {
+                if (outer != null) {
+                    return outer.Set(name, val);
+                }
+
+                return Evaluator.newError($"'{name}' was not declared in this scope");
             }
-            else {
-                types.Add(name, val.Type());
-                store.Add(name, val);
+
+            var orgType = types[name];
+
+            switch (orgType) {
+                case ObjectType.INTEGER_OBJ:
+                    val = ParseInt(val);
+                    break;
+                case ObjectType.REAL_NUMBER_OBJ:
+                    val = PalseFloat(val);
+                    break;
+                case ObjectType.BOOLEAN_OBJ:
+                    val = ParseBool(val);
+                    break;
+                case ObjectType.CHARACTER_OBJ:
+                    val = ParseChar(val);
+                    break;
+                case ObjectType.VOID_OBJ:
+                    break;
             }
+
+            if (val.Type() == ObjectType.ERROR_OBJ) {
+                return val;
+            }
+
+            store[name] = val;
 
             return val;
         }
@@ -91,6 +132,7 @@ namespace InterpreterExam {
                     if (functionObj.ReturnType != ObjectType.REAL_NUMBER_OBJ) {
                         return Evaluator.newError($"invalid data type : '{val.Type()}'");
                     }
+
                     break;
                 case ObjectType.INTEGER_OBJ:
                     var integerObj = (Integer)val;

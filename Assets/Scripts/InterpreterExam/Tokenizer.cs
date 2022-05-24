@@ -17,6 +17,8 @@ namespace InterpreterExam {
             {"else", TokenType.ELSE},
             {"return", TokenType.RETURN},
             {"for", TokenType.FOR},
+            {"while", TokenType.WHILE},
+            {"break", TokenType.BREAK},
         };
 
         public static TokenType LookupIdent(string ident) {
@@ -110,6 +112,8 @@ namespace InterpreterExam {
         IF,
         ELSE,
         RETURN,
+        BREAK,
         FOR,
+        WHILE,
     }
 }

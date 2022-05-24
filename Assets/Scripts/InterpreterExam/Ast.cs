@@ -41,11 +41,39 @@ namespace InterpreterExam {
         }
     }
 
-    public struct DataStatement : Statement {
+    public struct InitStatement : Statement {
+        public Token Token;
+        public Identifier Name;
+        public Expression Value;
+        
+        public void statementNode() { }
+
+        public string String() {
+            var buffer = "";
+            buffer += TokenLiteral() + " ";
+            buffer += Name.String();
+            buffer += " = ";
+
+            if (Value != null) {
+                buffer += Value.String();
+            }
+
+            buffer += ";";
+
+            return buffer;
+        }
+
+        public string TokenLiteral() {
+            return Token.Literal;
+        }
+    }
+    
+    public struct AssignStatement : Statement {
         public Token Token;
         public Identifier Name;
         public Expression Value;
         public string assignOperator;
+        
         public void statementNode() { }
 
         public string String() {
@@ -85,6 +113,24 @@ namespace InterpreterExam {
                 buffer += ReturnValue.String();
             }
 
+            buffer += ";";
+
+            return buffer;
+        }
+    }
+    
+    public struct BreakStatement : Statement {
+        public Token Token;
+
+        public string TokenLiteral() {
+            return Token.Literal;
+        }
+
+        public void statementNode() { }
+
+        public string String() {
+            var buffer = "";
+            buffer += TokenLiteral();
             buffer += ";";
 
             return buffer;
@@ -315,6 +361,35 @@ namespace InterpreterExam {
 
             buffer += " else ";
             buffer += Alternative?.String();
+
+            return buffer;
+        }
+
+        public void expressionNode() {
+            throw new NotImplementedException();
+        }
+    }
+    
+    public struct IterationExpression : Expression {
+        public Token Token;
+        public Statement InitStatement;
+        public Expression Condition;
+        public Expression Change;
+        public BlockStatement IterationBlockStatement;
+
+        public string TokenLiteral() {
+            return Token.Literal;
+        }
+
+        public string String() {
+            string buffer = "";
+            buffer += "for";
+            buffer += InitStatement.String();
+            buffer += "; ";
+            buffer += Condition.String();
+            buffer += "; ";
+            buffer += Change.String();
+            buffer += IterationBlockStatement.String();
 
             return buffer;
         }

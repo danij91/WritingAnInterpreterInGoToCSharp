@@ -21,7 +21,7 @@ public class SimpleUI : MonoBehaviour {
     public Repl repl;
 
     private void Awake() {
-        input.onEndEdit.AddListener(PlayRepl);
+        // input.onEndEdit.AddListener(PlayRepl);
         repl = new Repl();
         button.onClick.AddListener(PlayReplWithInputText);
 
@@ -29,7 +29,10 @@ public class SimpleUI : MonoBehaviour {
     }
 
     private void PlayReplWithInputText() {
-        PlayRepl(input.text);
+        ReplResult result = repl.RunCode(input.text);
+        outputTextAnimPlayer.ShowText(result.resultText);
+        output.color = result.isError ? Color.red : Color.white;
+        EventSystem.current.SetSelectedGameObject(input.gameObject, null);
     }
 
     private void PlayRepl(string inputText) {
