@@ -11,6 +11,18 @@ namespace InterpreterExam {
         private static readonly Boolean FALSE = new Boolean {Value = false};
 
         public static readonly Null NULL = new Null();
+        private Dictionary<string, Object> externalClassConstructors = new Dictionary<string, Object>();
+        private Builtins btins = new Builtins();
+
+        public void AddLibrary(LibraryClassBase library) {
+            foreach (var header in library.Header) {
+                externalClassConstructors.Add(header.Key, header.Value);
+            }
+            
+            foreach (var externalFunction in library.Fields) {
+                btins.builtins.Add(externalFunction.Key, externalFunction.Value);
+            }
+        }
 
         public Object Eval(Node node, Environment env) {
             switch (node) {
@@ -34,17 +46,7 @@ namespace InterpreterExam {
 
                     return evalPrefixExpression(prefixExpression, prefixRight, env);
                 case InfixExpression infixExpression:
-                    Object infixLeft = Eval(infixExpression.Left, env);
-                    if (isError(infixLeft)) {
-                        return infixLeft;
-                    }
-
-                    Object infixRight = Eval(infixExpression.Right, env);
-                    if (isError(infixRight)) {
-                        return infixRight;
-                    }
-
-                    return evalInfixExpression(infixExpression.Operator, infixLeft, infixRight);
+                    return evalInfixExpression(infixExpression, env);
                 case PostfixExpression postfixExpression:
                     Object postFixLeft = Eval(postfixExpression.Left, env);
                     if (isError(postFixLeft)) {
@@ -216,6 +218,9 @@ namespace InterpreterExam {
                 case TokenType.VOID:
                     dataType = ObjectType.VOID_OBJ;
                     break;
+                case TokenType.CLASS:
+                    dataType = ObjectType.CLASS_OBJ;
+                    break;
                 default:
                     return NULL;
             }
@@ -293,7 +298,22 @@ namespace InterpreterExam {
             return right;
         }
 
-        private Object evalInfixExpression(string Operator, Object left, Object right) {
+        private Object evalInfixExpression(InfixExpression infixExpression, Environment env) {
+            var Operator = infixExpression.Operator;
+            var left = Eval(infixExpression.Left, env);
+            if (isError(left)) {
+                return left;
+            }
+
+            if (left.Type() == ObjectType.CLASS_OBJ) {
+                return evalClassInfixExpression(Operator, left, infixExpression.Right);
+            }
+
+            Object right = Eval(infixExpression.Right, env);
+            if (isError(right)) {
+                return right;
+            }
+
             if (IsNumber(left) && IsNumber(right)) {
                 return evalNumberInfixExpression(Operator, left, right);
             }
@@ -301,6 +321,7 @@ namespace InterpreterExam {
             if (left.Type() == ObjectType.STRING_OBJ && right.Type() == ObjectType.STRING_OBJ) {
                 return evalStringInfixExpression(Operator, left, right);
             }
+
 
             if (Operator == "==") {
                 return nativeBoolToBooleanObject(left.Equals(right));
@@ -351,6 +372,14 @@ namespace InterpreterExam {
             var rightVal = ((String)right).Value;
 
             return new String {Value = leftVal + rightVal};
+        }
+
+        private Object evalClassInfixExpression(string Operator, Object left, Expression right) {
+            if (Operator != "." || !(right is Identifier))
+                return newError($"unknown operator: {left.Type()} {Operator} {right}");
+
+            var classEnv = ((Class)left).env;
+            return classEnv.Get(((Identifier)right).Value);
         }
 
         private Object evalPostfixExpression(PostfixExpression postfixExpression, Object left, Environment env) {
@@ -420,6 +449,7 @@ namespace InterpreterExam {
                     return newError("Stack overflow");
                     break;
                 }
+
                 Eval(fe.Change, env);
                 var currentBlock = Eval(fe.IterationBlockStatement, env);
 
@@ -477,8 +507,12 @@ namespace InterpreterExam {
                 return getValue;
             }
 
-            if (Builtins.builtins.ContainsKey(node.Value)) {
-                return Builtins.builtins[node.Value];
+            if (btins.builtins.ContainsKey(node.Value)) {
+                return btins.builtins[node.Value];
+            }
+
+            if (externalClassConstructors.ContainsKey(node.Value)) {
+                return externalClassConstructors[node.Value];
             }
 
             return newError($"identifier not found: {node.Value}");
@@ -563,8 +597,8 @@ namespace InterpreterExam {
                     var extendedEnv = extendedFunctionEnv(function, args);
                     var evaluated = Eval(function.Body, extendedEnv);
                     return unwrapReturnValue(evaluated);
-                case Builtin builtin:
-                    return builtin.Fn(args);
+                case HostFunction hostFunction:
+                    return hostFunction.Fn(args);
                 default:
                     return newError($"not a function: {fn.Type()}");
             }

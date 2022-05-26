@@ -24,8 +24,8 @@ if(5 < 10){
     + "\"foobar\""
     + "\"foo bar\"";
             Dictionary<TokenType, string> tests = new Dictionary<TokenType, string> {
-                {TokenType.STRING, "foobar"},
-                {TokenType.STRING, "foo bar"},
+                {TokenType.DATATYPE_STRING, "foobar"},
+                {TokenType.DATATYPE_STRING, "foo bar"},
                 {TokenType.EOF, ""},
             };
         }

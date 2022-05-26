@@ -1,8 +1,4 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 using Febucci.UI;
 using InterpreterExam;
 using TMPro;
@@ -29,7 +25,7 @@ public class SimpleUI : MonoBehaviour {
     }
 
     private void PlayReplWithInputText() {
-        ReplResult result = repl.RunCode(input.text);
+        ReplResult result = repl.RunCodeFresh(input.text);
         outputTextAnimPlayer.ShowText(result.resultText);
         output.color = result.isError ? Color.red : Color.white;
         EventSystem.current.SetSelectedGameObject(input.gameObject, null);
@@ -98,7 +94,8 @@ let x = 5;
 let y = 10;
 let foobar = 838383;
 ";
-        var l = new Lexer(input);
+        var t = new Tokenizer();
+        var l = new Lexer(input, t);
         while (!l.isLast) {
             var tok = l.NextToken();
             tok.WriteInfo();
@@ -118,7 +115,8 @@ let foobar = 838383;
         // let = 10;
         // let 838383;
         // ";
-        var l = new Lexer(input);
+        var t = new Tokenizer();
+        var l = new Lexer(input, t);
         var p = new Parser(l);
 
         Program program = p.ParseProgram();
@@ -136,7 +134,8 @@ return 5;
 return 10;
 return 993322;
 ";
-        var l = new Lexer(input);
+        var t = new Tokenizer();
+        var l = new Lexer(input, t);
         var p = new Parser(l);
 
         Program program = p.ParseProgram();
@@ -147,7 +146,8 @@ return 993322;
         string input = @"
 let myVar = anotherVar;
 ";
-        var l = new Lexer(input);
+        var t = new Tokenizer();
+        var l = new Lexer(input, t);
         var p = new Parser(l);
 
         Program program = p.ParseProgram();
@@ -163,7 +163,8 @@ let myVar = anotherVar;
         string input = @"
 foobar;
 ";
-        var l = new Lexer(input);
+        var t = new Tokenizer();
+        var l = new Lexer(input, t);
         var p = new Parser(l);
 
         Program program = p.ParseProgram();
@@ -176,7 +177,8 @@ foobar;
         string input = @"
 5;
 ";
-        var l = new Lexer(input);
+        var t = new Tokenizer();
+        var l = new Lexer(input, t);
         var p = new Parser(l);
 
         Program program = p.ParseProgram();
@@ -187,7 +189,8 @@ foobar;
 
     public void TestPrefixExpression() {
         string input = this.input.text;
-        var l = new Lexer(input);
+        var t = new Tokenizer();
+        var l = new Lexer(input, t);
         var p = new Parser(l);
 
         Program program = p.ParseProgram();
@@ -214,7 +217,8 @@ foobar;
         };
 
         foreach (var tt in tests) {
-            var l = new Lexer(tt.input);
+            var t = new Tokenizer();
+        var l = new Lexer(tt.input, t);
             var p = new Parser(l);
 
             Program program = p.ParseProgram();
@@ -237,7 +241,8 @@ foobar;
             new testExample("!(true == true)", "(!(true == true))")
         };
         foreach (var tt in tests) {
-            var l = new Lexer(tt.input);
+            var t = new Tokenizer();
+        var l = new Lexer(tt.input, t);
             var p = new Parser(l);
 
             Program program = p.ParseProgram();
@@ -256,7 +261,8 @@ foobar;
             new testExample(@"if (x < y) { x } else { y }", ""),
         };
         foreach (var tt in tests) {
-            var l = new Lexer(tt.input);
+            var t = new Tokenizer();
+        var l = new Lexer(tt.input, t);
             var p = new Parser(l);
 
             Program program = p.ParseProgram();
@@ -270,7 +276,8 @@ foobar;
         };
 
         foreach (var tt in tests) {
-            var l = new Lexer(tt.input);
+            var t = new Tokenizer();
+        var l = new Lexer(tt.input, t);
             var p = new Parser(l);
 
             Program program = p.ParseProgram();
@@ -284,7 +291,8 @@ foobar;
         };
 
         foreach (var tt in tests) {
-            var l = new Lexer(tt.input);
+            var t = new Tokenizer();
+        var l = new Lexer(tt.input, t);
             var p = new Parser(l);
 
             Program program = p.ParseProgram();

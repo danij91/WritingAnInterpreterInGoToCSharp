@@ -8,6 +8,7 @@ using UnityEngine;
 namespace InterpreterExam {
     public class Parser {
         private Lexer l;
+        private Linker linker;
         private Token curToken;
         private Token peekToken;
         private bool isCurTokenAdded;
@@ -16,6 +17,7 @@ namespace InterpreterExam {
         private Dictionary<TokenType, Func<Expression>> prefixParseFns = new Dictionary<TokenType, Func<Expression>>();
         private Dictionary<TokenType, Func<Expression, Expression>> infixParseFns =
             new Dictionary<TokenType, Func<Expression, Expression>>();
+
         private Dictionary<TokenType, PRECEDENCES> precedences = new Dictionary<TokenType, PRECEDENCES>() {
             {TokenType.EQ, PRECEDENCES.EQUALS},
             {TokenType.NOT_EQ, PRECEDENCES.EQUALS},
@@ -26,17 +28,20 @@ namespace InterpreterExam {
             {TokenType.SLASH, PRECEDENCES.PRODUCT},
             {TokenType.ASTERISK, PRECEDENCES.PRODUCT},
             {TokenType.LPAREN, PRECEDENCES.CALL},
+            {TokenType.DOT, PRECEDENCES.CALL},
             {TokenType.LBRACKET, PRECEDENCES.INDEX},
             {TokenType.INCREMENT, PRECEDENCES.CALL},
             {TokenType.DECREMENT, PRECEDENCES.CALL},
         };
 
-        public Parser(Lexer l) {
+        public Parser(Lexer l, Linker linker = null) {
             this.l = l;
+            this.linker = linker;
             registerPrefix(TokenType.IDENT, parseIdentifier);
-            registerPrefix(TokenType.INTEGER, parseIntegerLiteral);
-            registerPrefix(TokenType.REAL_NUMBER, parseRealNumberLiteral);
-            registerPrefix(TokenType.CHARACTER, parseCharacterLiteral);
+            registerPrefix(TokenType.CLASS, parseIdentifier);
+            registerPrefix(TokenType.DATATYPE_INT, parseIntegerLiteral);
+            registerPrefix(TokenType.DATATYPE_FLOAT, parseRealNumberLiteral);
+            registerPrefix(TokenType.DATATYPE_CHAR, parseCharacterLiteral);
             registerPrefix(TokenType.BANG, parsePrefixExpression);
             registerPrefix(TokenType.MINUS, parsePrefixExpression);
             registerPrefix(TokenType.INCREMENT, parsePrefixExpression);
@@ -47,9 +52,10 @@ namespace InterpreterExam {
             registerPrefix(TokenType.IF, parseIfExpression);
             registerPrefix(TokenType.FOR, parseForExpression);
             registerPrefix(TokenType.WHILE, parseWhileExpression);
-            registerPrefix(TokenType.STRING, parseStringLiteral);
+            registerPrefix(TokenType.DATATYPE_STRING, parseStringLiteral);
             registerPrefix(TokenType.LBRACKET, parseArrayLiteral);
             registerPrefix(TokenType.LBRACE, parseHashLiteral);
+            registerPrefix(TokenType.SHARP, parseSharpExpression);
 
             registerInfix(TokenType.PLUS, parseInfixExpression);
             registerInfix(TokenType.MINUS, parseInfixExpression);
@@ -63,6 +69,7 @@ namespace InterpreterExam {
             registerInfix(TokenType.GT, parseInfixExpression);
             registerInfix(TokenType.LPAREN, parseCallExpression);
             registerInfix(TokenType.LBRACKET, parseIndexExpression);
+            registerInfix(TokenType.DOT, parseInfixExpression);
 
             NextToken();
             NextToken();
@@ -99,6 +106,7 @@ namespace InterpreterExam {
                 case TokenType.FLOAT:
                 case TokenType.INT:
                 case TokenType.VOID:
+                case TokenType.CLASS:
                     return parseInitDataStateMent();
                 case TokenType.RETURN:
                     return parseReturnStatement();
@@ -444,9 +452,9 @@ namespace InterpreterExam {
                 errors.Add(msg);
                 return null;
             }
-            
+
             expression.Condition = parseExpression(PRECEDENCES.LOWEST);
-            
+
             if (!curTokenIs(TokenType.RPAREN))
                 return null;
             if (!expectPeek(TokenType.LBRACE))
@@ -573,6 +581,45 @@ namespace InterpreterExam {
             }
 
             return hash;
+        }
+
+        private Expression parseSharpExpression() {
+            if (!expectPeek(TokenType.INCLUDE)) {
+                return null;
+            }
+
+            if (!expectPeek(TokenType.LT)) {
+                return null;
+            }
+
+            if (!expectPeek(TokenType.IDENT)) {
+                return null;
+            }
+
+            var libraryName = curToken.Literal;
+
+            if (peekTokenIs(TokenType.DOT)) {
+                NextToken();
+                libraryName += curToken.Literal;
+            }
+
+            if (peekTokenIs(TokenType.IDENT)) {
+                NextToken();
+                libraryName += curToken.Literal;
+            }
+
+            var isLinkSuccess = linker.LinkLibrary(libraryName);
+
+            if (!isLinkSuccess) {
+                errors.Add("Library not exist please check library name");
+                return null;
+            }
+
+            if (!expectPeek(TokenType.GT)) {
+                return null;
+            }
+
+            return null;
         }
 
         private bool curTokenIs(TokenType t) {

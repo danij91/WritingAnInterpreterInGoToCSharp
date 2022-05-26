@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace InterpreterExam {
-    public static class Tokenizer {
-        private static Dictionary<string, TokenType> kewords = new Dictionary<string, TokenType>() {
+    public class Tokenizer {
+        private Dictionary<string, TokenType> kewords = new Dictionary<string, TokenType> {
             {"int", TokenType.INT},
             {"float", TokenType.FLOAT},
             {"char", TokenType.CHAR},
@@ -19,9 +19,16 @@ namespace InterpreterExam {
             {"for", TokenType.FOR},
             {"while", TokenType.WHILE},
             {"break", TokenType.BREAK},
+            {"include", TokenType.INCLUDE},
         };
 
-        public static TokenType LookupIdent(string ident) {
+        public void AddHeader(LibraryClassBase library) {
+            foreach (var header in library.Header) {
+                kewords.Add(header.Key, TokenType.CLASS);
+            }
+        }
+
+        public TokenType LookupIdent(string ident) {
             if (kewords.ContainsKey(ident)) {
                 return kewords[ident];
             }
@@ -65,13 +72,14 @@ namespace InterpreterExam {
     public enum TokenType {
         ILLEGAL,
         EOF,
-        
+
         //식별자 + 리터럴
         INT,
         CHAR,
         FLOAT,
         BOOL,
         VOID,
+        CLASS,
 
         //연산자
         ASSIGN,
@@ -86,6 +94,7 @@ namespace InterpreterExam {
         NOT_EQ,
         INCREMENT,
         DECREMENT,
+        DOT,
 
         //구분자
         COMMA,
@@ -98,13 +107,15 @@ namespace InterpreterExam {
         RBRACE,
         LBRACKET,
         RBRACKET,
+        SHARP,
 
         //자료형
         IDENT,
-        INTEGER,
-        STRING,
-        CHARACTER,
-        REAL_NUMBER,
+        DATATYPE_INT,
+        DATATYPE_STRING,
+        DATATYPE_CHAR,
+        DATATYPE_FLOAT,
+        DATATYPE_CLASS,
 
         //키워드
         TRUE,
@@ -115,5 +126,6 @@ namespace InterpreterExam {
         BREAK,
         FOR,
         WHILE,
+        INCLUDE,
     }
 }

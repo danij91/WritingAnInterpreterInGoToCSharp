@@ -217,7 +217,8 @@ namespace InterpreterExam {
         }
 
         private Object testEval(string input) {
-            var l = new Lexer(input);
+            var t = new Tokenizer();
+            var l = new Lexer(input, t);
             var p = new Parser(l);
             var program = p.ParseProgram();
             var e = new Evaluator();

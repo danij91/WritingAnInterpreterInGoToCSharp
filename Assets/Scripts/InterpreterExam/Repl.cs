@@ -5,14 +5,20 @@ using UnityEngine;
 namespace InterpreterExam {
     public class Repl {
         private Environment staticEnvironment = new Environment();
+        private bool isFirst = true;
+
         //Start
         public ReplResult RunCodeFresh(string line) {
             if (string.IsNullOrEmpty(line)) {
                 return new ReplResult {resultText = "empty code", isError = false};
             }
 
-            var l = new Lexer(line);
-            var p = new Parser(l);
+            var t = new Tokenizer();
+            var e = new Evaluator();
+            var linker = new Linker(e, t);
+
+            var l = new Lexer(line, t);
+            var p = new Parser(l, linker);
 
             var program = p.ParseProgram();
 
@@ -20,7 +26,8 @@ namespace InterpreterExam {
                 printParseErrors(p.Errors());
             }
 
-            var e = new Evaluator();
+            linker.e = e;
+
             var env = new Environment();
             var evaluated = e.Eval(program, env);
             if (evaluated != null) {
@@ -34,8 +41,10 @@ namespace InterpreterExam {
             if (string.IsNullOrEmpty(line)) {
                 return new ReplResult {resultText = "empty code", isError = false};
             }
-            
-            var l = new Lexer(line);
+
+            var t = new Tokenizer();
+
+            var l = new Lexer(line, t);
             var p = new Parser(l);
 
             var program = p.ParseProgram();
@@ -43,8 +52,9 @@ namespace InterpreterExam {
             if (p.Errors().Count != 0) {
                 printParseErrors(p.Errors());
             }
-            
+
             var e = new Evaluator();
+
             var evaluated = e.Eval(program, staticEnvironment);
             if (evaluated != null) {
                 return new ReplResult {resultText = evaluated.Inspect(), isError = e.isError(evaluated)};

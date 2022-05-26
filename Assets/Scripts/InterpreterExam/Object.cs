@@ -172,11 +172,11 @@ namespace InterpreterExam {
         }
     }
 
-    public struct Builtin : Object {
+    public struct HostFunction : Object {
         public Func<List<Object>, Object> Fn;
 
         public ObjectType Type() {
-            return ObjectType.BUILTIN_OBJ;
+            return ObjectType.HOST_FUNCTION_OBJ;
         }
 
         public string Inspect() {
@@ -222,6 +222,19 @@ namespace InterpreterExam {
         }
     }
 
+    public struct Class : Object {
+        public Environment env;
+        public ObjectType Type() {
+            return ObjectType.CLASS_OBJ;
+        }
+
+        public string Inspect() {
+            var buffer = "";
+            buffer += "class ";
+            return buffer;
+        }
+    }
+
     public struct HashPair {
         public Object Key;
         public Object Value;
@@ -246,7 +259,8 @@ namespace InterpreterExam {
         FUNCTION_OBJ,
         STRING_OBJ,
         ARRAY_OBJ,
-        BUILTIN_OBJ,
-        HASH_OBJ
+        HOST_FUNCTION_OBJ,
+        HASH_OBJ,
+        CLASS_OBJ,
     }
 }

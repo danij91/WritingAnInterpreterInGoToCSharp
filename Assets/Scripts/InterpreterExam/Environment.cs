@@ -40,6 +40,9 @@ namespace InterpreterExam {
                 case ObjectType.CHARACTER_OBJ:
                     val = ParseChar(val);
                     break;
+                case ObjectType.CLASS_OBJ:
+                    val = ParseClass(val);
+                    break;
                 case ObjectType.VOID_OBJ:
                     break;
                 default:
@@ -82,6 +85,9 @@ namespace InterpreterExam {
                 case ObjectType.CHARACTER_OBJ:
                     val = ParseChar(val);
                     break;
+                case ObjectType.CLASS_OBJ:
+                    val = ParseClass(val);
+                    break;
                 case ObjectType.VOID_OBJ:
                     break;
             }
@@ -102,7 +108,8 @@ namespace InterpreterExam {
                     if (functionObj.ReturnType != ObjectType.INTEGER_OBJ) {
                         return Evaluator.newError($"invalid data type : '{val.Type()}'");
                     }
-
+                    break;
+                case ObjectType.HOST_FUNCTION_OBJ:
                     break;
                 case ObjectType.INTEGER_OBJ:
                     break;
@@ -133,6 +140,8 @@ namespace InterpreterExam {
                         return Evaluator.newError($"invalid data type : '{val.Type()}'");
                     }
 
+                    break;
+                case ObjectType.HOST_FUNCTION_OBJ:
                     break;
                 case ObjectType.INTEGER_OBJ:
                     var integerObj = (Integer)val;
@@ -165,6 +174,8 @@ namespace InterpreterExam {
                     }
 
                     break;
+                case ObjectType.HOST_FUNCTION_OBJ:
+                    break;
                 case ObjectType.INTEGER_OBJ:
                     var integerObj = (Integer)val;
                     val = new Character {Value = (char)integerObj.Value};
@@ -196,6 +207,8 @@ namespace InterpreterExam {
                     }
 
                     break;
+                case ObjectType.HOST_FUNCTION_OBJ:
+                    break;
                 case ObjectType.INTEGER_OBJ:
                     var integerObj = (Integer)val;
                     val = new Boolean {Value = integerObj.Value != 0};
@@ -213,6 +226,24 @@ namespace InterpreterExam {
                 default:
                     return Evaluator.newError(
                         $"invalid conversion from '{val.Type()}' to '{ObjectType.BOOLEAN_OBJ}'");
+            }
+
+            return val;
+        }
+        
+        private Object ParseClass(Object val) {
+            if (val.Type() != ObjectType.CLASS_OBJ) {
+                return Evaluator.newError(
+                    $"invalid conversion from '{val.Type()}' to '{ObjectType.HOST_FUNCTION_OBJ}'");
+            }
+
+            return val;
+        }
+
+        private Object ParseHostFunction(Object val) {
+            if (val.Type() != ObjectType.HOST_FUNCTION_OBJ) {
+                return Evaluator.newError(
+                    $"invalid conversion from '{val.Type()}' to '{ObjectType.HOST_FUNCTION_OBJ}'");
             }
 
             return val;

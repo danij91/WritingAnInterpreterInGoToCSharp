@@ -10,10 +10,12 @@ namespace InterpreterExam {
         private int position;
         private int readPosition;
         private byte ch;
+        private Tokenizer tokenizer;
 
         public bool isLast { get; set; }
 
-        public Lexer(string input) {
+        public Lexer(string input, Tokenizer t) {
+            tokenizer = t;
             this.input = input;
             readChar();
         }
@@ -54,7 +56,7 @@ namespace InterpreterExam {
                         var literal = "" + (char)tempCh + (char)ch;
                         tok = new Token(TokenType.INCREMENT, literal);
                     }
-                    else if(peekChar() == '=') {
+                    else if (peekChar() == '=') {
                         var tempCh = ch;
                         readChar();
                         var literal = "" + (char)tempCh + (char)ch;
@@ -63,7 +65,7 @@ namespace InterpreterExam {
                     else {
                         tok = new Token(TokenType.PLUS, (char)ch + "");
                     }
-                    
+
                     break;
                 case (byte)'-':
                     if (peekChar() == '-') {
@@ -72,7 +74,7 @@ namespace InterpreterExam {
                         var literal = "" + (char)tempCh + (char)ch;
                         tok = new Token(TokenType.DECREMENT, literal);
                     }
-                    else if(peekChar() == '=') {
+                    else if (peekChar() == '=') {
                         var tempCh = ch;
                         readChar();
                         var literal = "" + (char)tempCh + (char)ch;
@@ -81,7 +83,7 @@ namespace InterpreterExam {
                     else {
                         tok = new Token(TokenType.MINUS, (char)ch + "");
                     }
-                    
+
                     break;
                 case (byte)'!':
                     if (peekChar() == '=') {
@@ -105,6 +107,7 @@ namespace InterpreterExam {
                     else {
                         tok = new Token(TokenType.SLASH, (char)ch + "");
                     }
+
                     break;
                 case (byte)'*':
                     if (peekChar() == '=') {
@@ -116,6 +119,7 @@ namespace InterpreterExam {
                     else {
                         tok = new Token(TokenType.ASTERISK, (char)ch + "");
                     }
+
                     break;
                 case (byte)'<':
                     tok = new Token(TokenType.LT, (char)ch + "");
@@ -151,10 +155,16 @@ namespace InterpreterExam {
                     tok = new Token(TokenType.COLON, (char)ch + "");
                     break;
                 case (byte)'"':
-                    tok = new Token(TokenType.STRING, readString());
+                    tok = new Token(TokenType.DATATYPE_STRING, readString());
                     break;
                 case (byte)'\'':
-                    tok = new Token(TokenType.CHARACTER, readCharacter());
+                    tok = new Token(TokenType.DATATYPE_CHAR, readCharacter());
+                    break;
+                case (byte)'.':
+                    tok = new Token(TokenType.DOT, (char)ch + "");
+                    break;
+                case (byte)'#':
+                    tok = new Token(TokenType.SHARP, (char)ch + "");
                     break;
                 case 0:
                     tok = new Token(TokenType.EOF, "");
@@ -162,7 +172,7 @@ namespace InterpreterExam {
                 default:
                     if (isLetter(ch)) {
                         var literal = readIdentifier();
-                        var type = Tokenizer.LookupIdent(literal);
+                        var type = tokenizer.LookupIdent(literal);
                         return new Token(type, literal);
                     }
                     else if (isDigit(ch)) {
@@ -226,11 +236,11 @@ namespace InterpreterExam {
 
         private Tuple<TokenType, string> readNumber() {
             var tempPosition = position;
-            var type = TokenType.INTEGER;
+            var type = TokenType.DATATYPE_INT;
 
             while (isDigit(ch) || ch == '.') {
                 if (ch == '.') {
-                    type = TokenType.REAL_NUMBER;
+                    type = TokenType.DATATYPE_FLOAT;
                 }
 
                 readChar();

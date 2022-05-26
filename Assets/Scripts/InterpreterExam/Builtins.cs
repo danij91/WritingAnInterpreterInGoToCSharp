@@ -3,17 +3,21 @@ using System.Linq;
 using UnityEngine;
 
 namespace InterpreterExam {
-    public static class Builtins {
-        public static Dictionary<string, Object> builtins = new Dictionary<string, Object> {
-            {"len", new Builtin {Fn = Len}},
-            {"first", new Builtin {Fn = First}},
-            {"last", new Builtin {Fn = Last}},
-            {"rest", new Builtin {Fn = Rest}},
-            {"push", new Builtin {Fn = Push}},
-            {"puts", new Builtin {Fn = Puts}},
-        };
+    public class Builtins {
+        public Builtins() {
+            builtins = new Dictionary<string, Object> {
+                {"len", new HostFunction {Fn = Len}},
+                {"first", new HostFunction {Fn = First}},
+                {"last", new HostFunction {Fn = Last}},
+                {"rest", new HostFunction {Fn = Rest}},
+                {"push", new HostFunction {Fn = Push}},
+                {"puts", new HostFunction {Fn = Puts}},
+            };
+        }
 
-        private static Object Len(List<Object> args) {
+        public Dictionary<string, Object> builtins;
+
+        private Object Len(List<Object> args) {
             if (args.Count != 1) {
                 return Evaluator.newError($"wrong number of arguments. got {args.Count}, want = 1");
             }
@@ -28,7 +32,7 @@ namespace InterpreterExam {
             }
         }
 
-        private static Object First(List<Object> args) {
+        private Object First(List<Object> args) {
             if (args.Count != 1) {
                 return Evaluator.newError($"wrong number of arguments. got {args.Count}, want = 1");
             }
@@ -42,7 +46,7 @@ namespace InterpreterExam {
             return arr.Elements.Count > 0 ? arr.Elements.First() : Evaluator.NULL;
         }
 
-        private static Object Last(List<Object> args) {
+        private Object Last(List<Object> args) {
             if (args.Count != 1) {
                 return Evaluator.newError($"wrong number of arguments. got {args.Count}, want = 1");
             }
@@ -56,7 +60,7 @@ namespace InterpreterExam {
             return arr.Elements.Count > 0 ? arr.Elements.Last() : Evaluator.NULL;
         }
 
-        private static Object Rest(List<Object> args) {
+        private Object Rest(List<Object> args) {
             if (args.Count != 1) {
                 return Evaluator.newError($"wrong number of arguments. got {args.Count}, want = 1");
             }
@@ -77,7 +81,7 @@ namespace InterpreterExam {
             return Evaluator.NULL;
         }
 
-        private static Object Push(List<Object> args) {
+        private Object Push(List<Object> args) {
             if (args.Count != 2) {
                 return Evaluator.newError($"wrong number of arguments. got {args.Count}, want = 1");
             }
@@ -94,7 +98,7 @@ namespace InterpreterExam {
             return new Array {Elements = newElements};
         }
 
-        private static Object Puts(List<Object> args) {
+        private Object Puts(List<Object> args) {
             foreach (var arg in args) {
                 Debug.Log(arg.Inspect());
             }
